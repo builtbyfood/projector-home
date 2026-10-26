@@ -1,0 +1,13 @@
+# projector-home .gitignore v0.2.1
+build/
+*.apk
+*.idsig
+*.dex
+*.keystore
+*.jks
+*.pass
+# local, household-specific installer (never published)
+install-local.sh
+local.properties
+.idea/
+*.iml
