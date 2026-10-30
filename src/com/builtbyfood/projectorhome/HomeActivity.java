@@ -1,4 +1,4 @@
-// Projector Home v0.2.1
+// Projector Home v0.3.0
 package com.builtbyfood.projectorhome;
 
 import android.app.Activity;
@@ -283,22 +283,60 @@ public class HomeActivity extends Activity {
         String modeLine = "Watching with: " + (cfg.isRoku() ? "Roku over HDMI" : "apps on this projector");
         String inputLine = "Streaming input: " + (cfg.hdmiSource() >= 0
                 ? "source " + cfg.hdmiSource() : "not set (shows last-used input)");
-        List<String> items = new ArrayList<>();
-        items.add(modeLine + " · change");
-        if (cfg.isRoku()) items.add("Roku address: " + (cfg.hasRokuIp() ? cfg.rokuIp() : "not set"));
-        items.add(inputLine);
-        items.add("Android settings");
         final boolean roku = cfg.isRoku();
+        List<String> items = new ArrayList<>();
+        List<Runnable> actions = new ArrayList<>();
+        items.add(modeLine + " · change");
+        actions.add(this::chooseMode);
+        if (roku) {
+            items.add("Roku address: " + (cfg.hasRokuIp() ? cfg.rokuIp() : "not set"));
+            actions.add(this::editRokuIp);
+            items.add("Projector remote controls Roku: " + remoteState());
+            actions.add(this::toggleRemote);
+        }
+        items.add(inputLine);
+        actions.add(this::pickInput);
+        items.add("Android settings");
+        actions.add(() -> startActivity(new Intent(Settings.ACTION_SETTINGS)));
         new AlertDialog.Builder(this)
                 .setTitle("Projector Home " + versionName())
-                .setItems(items.toArray(new String[0]), (d, which) -> {
-                    int i = which;
-                    if (i == 0) { chooseMode(); return; }
-                    if (roku) { if (i == 1) { editRokuIp(); return; } i--; }
-                    if (i == 1) { pickInput(); return; }
-                    startActivity(new Intent(Settings.ACTION_SETTINGS));
-                })
+                .setItems(items.toArray(new String[0]), (d, which) -> actions.get(which).run())
                 .show();
+    }
+
+    private String remoteState() {
+        if (!RokuRemoteService.isEnabled(this)) return "off (needs enabling)";
+        return cfg.remotePassthrough() ? "on" : "off";
+    }
+
+    /** Turn remote passthrough on/off; if the service isn't enabled yet, explain how. */
+    private void toggleRemote() {
+        if (!RokuRemoteService.isEnabled(this)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Enable remote passthrough")
+                    .setMessage("Android needs you to allow this once.\n\n"
+                            + "Settings → Device Preferences → Accessibility → "
+                            + "\"Projector Home: Roku remote\" → On.\n\n"
+                            + "Or from a computer:\n"
+                            + "adb shell settings put secure enabled_accessibility_services "
+                            + getPackageName() + "/" + RokuRemoteService.class.getName() + "\n"
+                            + "adb shell settings put secure accessibility_enabled 1\n\n"
+                            + "While the Roku is on screen, arrows, OK and Back go to the Roku. "
+                            + "Home still returns here. Menu hands the remote back to the projector.")
+                    .setPositiveButton("Open Accessibility settings", (d, w) -> {
+                        try {
+                            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                        } catch (Exception e) {
+                            startActivity(new Intent(Settings.ACTION_SETTINGS));
+                        }
+                    })
+                    .setNegativeButton("Close", null)
+                    .show();
+            return;
+        }
+        boolean on = !cfg.remotePassthrough();
+        cfg.setRemotePassthrough(on);
+        toast(on ? "Projector remote now controls the Roku" : "Projector remote passthrough off");
     }
 
     private void pickInput() {

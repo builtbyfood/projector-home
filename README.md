@@ -1,6 +1,6 @@
 # Projector Home
 
-<!-- projector-home README v0.2.1 -->
+<!-- projector-home README v0.3.0 -->
 
 **A small, private home screen (launcher) for Android projectors and TV boxes.** About 30 KB, no analytics, no accounts, no ads, and no network access beyond what you point it at.
 
@@ -14,6 +14,8 @@ It was built for one setup: **a Roku plugged into the projector's HDMI port**, w
 | **Apps on this projector** | Apps installed on the projector | Opens the app. An **HDMI Input** tile switches to a streaming stick, console, or laptop |
 
 Both modes include **Keystone / Focus** and **Settings** tiles. Long-press Settings for setup.
+
+In Roku mode, the **projector's own remote can drive the Roku** (arrows, OK, Back, play/pause) while the Roku is on screen, so you don't need two remotes. See [Using the projector remote with the Roku](#using-the-projector-remote-with-the-roku).
 
 ---
 
@@ -40,17 +42,17 @@ Tested on: **WiMiUS P63** (HiSilicon Hi3751V350, Android 9). Reports from other 
 
 You need `adb` (Android platform-tools) and ADB access to the projector. Most of these devices hide it: unlock Developer options (Settings → About, press OK on **Build** seven times), then enable USB or network debugging. Some firmware puts network ADB behind a separate "factory test" toggle. The [projector-reclaim removal guide](https://github.com/builtbyfood/projector-reclaim/blob/main/docs/removal-guide.md) §1 covers the common snags.
 
-1. **Download** `ProjectorHome-0.2.1.apk` and `ProjectorHome-0.2.1.apk.sha256` from [Releases](../../releases).
+1. **Download** `ProjectorHome-0.3.0.apk` and `ProjectorHome-0.3.0.apk.sha256` from [Releases](../../releases).
 2. **Verify** it:
    ```bash
-   sha256sum -c ProjectorHome-0.2.1.apk.sha256
-   apksigner verify --print-certs ProjectorHome-0.2.1.apk
+   sha256sum -c ProjectorHome-0.3.0.apk.sha256
+   apksigner verify --print-certs ProjectorHome-0.3.0.apk
    #   Signer #1 certificate SHA-256 digest: 51ba0861208a74415cd3a3ad69b7a01b685eeed7619ce6f3b1ef7204a866a51d
    ```
    The `apksigner` step needs Android SDK build-tools and is optional, but it's how you know the APK is the one published here. Every release is signed with this same certificate.
 3. **Install** and make it the home screen:
    ```bash
-   adb install ProjectorHome-0.2.1.apk
+   adb install ProjectorHome-0.3.0.apk
    adb shell cmd package set-home-activity com.builtbyfood.projectorhome/.HomeActivity
    adb shell input keyevent HOME
    ```
@@ -78,6 +80,35 @@ You need `adb` (Android platform-tools) and ADB access to the projector. Most of
 
 If you skip this, Projector Home shows whichever input was used last, which is fine if you only ever use one.
 
+### Using the projector remote with the Roku
+
+Projector Home includes an optional accessibility service that forwards the projector remote to the Roku over its local control API while the Roku's HDMI input is on screen.
+
+| Projector remote | Goes to |
+|---|---|
+| Arrows, OK, Back | Roku (Up/Down/Left/Right, Select, Back) |
+| Play/pause, rewind, fast-forward, info | Roku |
+| **Home** | Projector: back to Projector Home |
+| Volume, mute, power | Projector |
+| **Menu** | Hands the remote back to the projector (its picture menu opens). Press Menu again to give it back to the Roku |
+
+Android requires you to switch it on once:
+
+- On the projector: **Settings → Device Preferences → Accessibility → Projector Home: Roku remote → On**, or
+- From a computer, **adding** to whatever is already enabled (some firmware relies on its own accessibility service; on the WiMiUS P63 that's `com.hisilicon.rmservice/…HiRMService`, which must stay on):
+  ```bash
+  SVC=com.builtbyfood.projectorhome/com.builtbyfood.projectorhome.RokuRemoteService
+  CUR=$(adb shell settings get secure enabled_accessibility_services | tr -d '\r')
+  if [ -z "$CUR" ] || [ "$CUR" = null ]; then NEW=$SVC; else NEW="$CUR:$SVC"; fi
+  adb shell settings put secure enabled_accessibility_services "$NEW"
+  adb shell settings put secure accessibility_enabled 1
+  ```
+  Don't run `settings put` with only Projector Home's service: that switches the others off.
+
+Verified on a WiMiUS P63 with the projector's own remote. (Keys injected with `adb shell input keyevent` bypass Android's accessibility key filter, so use the real remote to test.)
+
+Turn passthrough on or off later from long-press **Settings → Projector remote controls Roku**. It only acts in Roku mode and only while the projector's HDMI player is in front; everywhere else the remote behaves normally.
+
 ### Home tiles
 
 Open **All Channels** (Roku mode) or **All Apps** (apps mode) and long-press to add a tile to home. Long-press a home tile to remove it. Tiles size themselves to the screen.
@@ -94,11 +125,12 @@ Open **All Channels** (Roku mode) or **All Apps** (apps mode) and long-press to 
 Projector Home:
 
 - requests only the `INTERNET` permission, used solely to reach the Roku address you enter (Roku mode)
-- stores its settings (mode, Roku address, input, tiles) and cached channel icons in its own private app storage
+- stores its settings (mode, Roku address, input, tiles, passthrough on/off) and cached channel icons in its own private app storage
 - contains no analytics, crash reporting, ads, accounts, or third-party libraries
 - makes no connections at all in apps mode
+- **remote passthrough (optional, off until you enable it):** as an accessibility service it is notified which app is in front (package and class name only; `canRetrieveWindowContent` is false, so it cannot read the screen) and sees remote-control key presses. It forwards navigation keys to your Roku only while the projector's HDMI player is in front, and lets every other key through untouched. Nothing is logged or stored
 
-The source is four Java files. Read them: [`src/com/builtbyfood/projectorhome/`](src/com/builtbyfood/projectorhome/).
+The source is five Java files. Read them: [`src/com/builtbyfood/projectorhome/`](src/com/builtbyfood/projectorhome/).
 
 ---
 
@@ -109,7 +141,7 @@ Requirements: JDK 11 or newer, and Android SDK packages `platforms;android-28` a
 ```bash
 sdkmanager --sdk_root=$HOME/Android/Sdk "platforms;android-28" "build-tools;34.0.0"
 ./build.sh
-# -> build/ProjectorHome-0.2.1-dev.apk, signed with a local development key
+# -> build/ProjectorHome-0.3.0-dev.apk, signed with a local development key
 ```
 
 A development build has a different signing certificate from the release, so Android won't install it over a release build (or vice versa). Uninstall first when switching.
@@ -126,7 +158,9 @@ Release builds are signed with a key kept outside this repository; see [RELEASIN
 | `Config.java` | Settings: mode, Roku address, HDMI source, home tiles |
 | `RokuClient.java` | Minimal Roku External Control Protocol client: channel list, icons, launch, keypress |
 | `HdmiInput.java` | HDMI input switching through the HiSilicon TV API (`com.hisilicon.android.tvapi`), loaded by reflection so the APK runs on any device |
-| `AndroidManifest.xml` | Declares the HOME / LEANBACK_LAUNCHER activity and the optional vendor library |
+| `RokuRemoteService.java` | Optional accessibility service: forwards the projector remote's navigation keys to the Roku while its HDMI input is shown |
+| `res/` | The accessibility service's configuration and description text |
+| `AndroidManifest.xml` | Declares the HOME / LEANBACK_LAUNCHER activity, the optional remote service, and the optional vendor library |
 
 On HiSilicon firmware the vendor TV jars are stripped down to stubs, with the real code only in pre-compiled form. [docs/porting.md](docs/porting.md) shows how the input API was found by asking the device's own runtime, which is also the way to port it to other chipsets.
 

@@ -1,6 +1,12 @@
 # Changelog
 
-<!-- projector-home CHANGELOG v0.2.1 -->
+<!-- projector-home CHANGELOG v0.3.0 -->
+
+## 0.3.0
+- **Projector remote controls the Roku.** Optional accessibility service: while the Roku's HDMI input is on screen, arrows, OK, Back and play keys go to the Roku over ECP. Home returns to Projector Home; Menu hands the remote back to the projector. Enable once in Accessibility settings; toggle in the setup menu.
+- Setup menu shows the passthrough state and how to enable it.
+- Build: compiles a small `res/` folder (service config and strings) and links it as base resources; javac pinned to UTF-8; `.sha256` files name the APK without a path.
+- Verified on a WiMiUS P63: arrows, OK, Back reach the Roku; Menu hands the remote back to the projector. The vendor's own accessibility service (`HiRMService`) is kept enabled alongside.
 
 ## 0.2.1 — 2026-10-26
 - First release as a standalone repository.

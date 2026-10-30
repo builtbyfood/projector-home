@@ -1,4 +1,4 @@
-// Projector Home v0.2.1
+// Projector Home v0.3.0
 package com.builtbyfood.projectorhome;
 
 import android.content.ActivityNotFoundException;

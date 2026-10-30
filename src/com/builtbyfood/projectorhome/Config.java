@@ -1,4 +1,4 @@
-// Projector Home v0.2.1
+// Projector Home v0.3.0
 package com.builtbyfood.projectorhome;
 
 import android.content.Context;
@@ -73,6 +73,17 @@ final class Config {
 
     void setHdmiSource(int id) {
         p.edit().putInt("hdmi_source", id).apply();
+    }
+
+    // ---- remote passthrough (RokuRemoteService)
+
+    /** Forward the projector remote to the Roku while its HDMI input is shown. Default on. */
+    boolean remotePassthrough() {
+        return p.getBoolean("remote_passthrough", true);
+    }
+
+    void setRemotePassthrough(boolean on) {
+        p.edit().putBoolean("remote_passthrough", on).apply();
     }
 
     // ---- favorites (roku channel IDs or app package names, depending on mode)

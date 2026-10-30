@@ -1,6 +1,6 @@
 # Security
 
-<!-- projector-home SECURITY v0.2.1 -->
+<!-- projector-home SECURITY v0.3.0 -->
 
 ## Reporting a vulnerability
 
@@ -18,4 +18,4 @@ Check with `apksigner verify --print-certs <apk>`. An APK signed with anything e
 
 ## Scope
 
-Projector Home holds no credentials and requests only `INTERNET`, which it uses only to reach the Roku address you enter. It cannot fix the device it runs on: if your projector shipped with malware, see [projector-reclaim](https://github.com/builtbyfood/projector-reclaim) to find and remove it.
+Projector Home holds no credentials and requests only `INTERNET`, which it uses only to reach the Roku address you enter. The optional remote-passthrough accessibility service cannot read screen content; it sees which app is in front and remote key presses, and forwards navigation keys only to that Roku address. It cannot fix the device it runs on: if your projector shipped with malware, see [projector-reclaim](https://github.com/builtbyfood/projector-reclaim) to find and remove it.

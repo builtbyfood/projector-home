@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Projector Home v0.3.0 -->
+<resources>
+    <string name="remote_service_label">Projector Home: Roku remote</string>
+    <string name="remote_service_description">While the Roku\'s HDMI input is on screen, sends the projector remote\'s arrow, OK, Back and play keys to the Roku over your local network. Press Menu to hand the remote back to the projector. Reads only which app is in front; never reads screen content.</string>
+</resources>

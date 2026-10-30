@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Projector Home build script v0.2.1
+# Projector Home build script v0.3.0
 # Plain SDK toolchain: aapt2 -> javac -> d8 -> zipalign -> apksigner (no Gradle).
 #
 #   ./build.sh                 dev build, signed with ~/.android/projectorhome-dev.keystore (auto-created)
@@ -7,7 +7,7 @@
 #                              release build for publishing; keystore and password stay outside the repo
 set -euo pipefail
 
-VERSION="0.2.1"
+VERSION="0.3.0"
 SDK="${ANDROID_HOME:-$HOME/Android/Sdk}"
 BT="$SDK/build-tools/34.0.0"
 PLAT="$SDK/platforms/android-28/android.jar"
@@ -35,10 +35,13 @@ fi
 rm -rf build/tmp
 mkdir -p build/tmp/classes build/tmp/dex
 
-"$BT/aapt2" link -o build/tmp/base.apk -I "$PLAT" \
+# Resources: only the accessibility-service config and its strings (res/).
+"$BT/aapt2" compile --dir res -o build/tmp/res.zip
+
+"$BT/aapt2" link -o build/tmp/base.apk -I "$PLAT" build/tmp/res.zip \
     --manifest AndroidManifest.xml --min-sdk-version 28 --target-sdk-version 28
 
-javac --release 11 -Xlint:-options -classpath "$PLAT" -d build/tmp/classes $(find src -name '*.java')
+javac --release 11 -encoding UTF-8 -Xlint:-options -classpath "$PLAT" -d build/tmp/classes $(find src -name '*.java')
 
 "$BT/d8" --release --min-api 28 --lib "$PLAT" --output build/tmp/dex $(find build/tmp/classes -name '*.class')
 
@@ -50,5 +53,6 @@ cp build/tmp/base.apk build/tmp/unsigned.apk
 "$BT/apksigner" sign --ks "$KS" --ks-pass "$PASS_ARG" \
     --ks-key-alias "$ALIAS" --out "$OUT" build/tmp/aligned.apk
 "$BT/apksigner" verify --print-certs "$OUT" | grep -E "certificate (DN|SHA-256)"
-sha256sum "$OUT" | tee "$OUT.sha256"
+# Checksum file names the APK without a path, so `sha256sum -c` works next to a download.
+(cd build && sha256sum "$(basename "$OUT")" | tee "$(basename "$OUT").sha256")
 echo "Built $OUT ($(stat -c %s "$OUT") bytes)"
